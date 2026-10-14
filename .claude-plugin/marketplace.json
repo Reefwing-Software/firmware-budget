@@ -1,0 +1,14 @@
+{
+  "name": "firmware-budget",
+  "owner": {
+    "name": "Reefwing Software",
+    "url": "https://github.com/Reefwing-Software"
+  },
+  "plugins": [
+    {
+      "name": "firmware-budget",
+      "source": "./"
+    }
+  ],
+  "description": "Flash and RAM budget band and commit guard for embedded firmware builds"
+}

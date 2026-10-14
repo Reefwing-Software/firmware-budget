@@ -1,0 +1,61 @@
+{
+  "name": "firmware-budget",
+  "version": "0.1.0",
+  "description": "Shows flash and RAM use of a firmware ELF above the prompt after every build, and holds a commit that is over budget",
+  "author": {
+    "name": "David Such",
+    "url": "https://www.reefwing.com.au"
+  },
+  "license": "MIT",
+  "keywords": [
+    "embedded",
+    "firmware",
+    "pico",
+    "cortex-m",
+    "size"
+  ],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "elf": {
+      "type": "string",
+      "title": "ELF path",
+      "description": "Path to the linked firmware ELF, relative to the project root, for example build/firmware.elf",
+      "required": true
+    },
+    "flash_budget": {
+      "type": "number",
+      "title": "Flash budget (bytes)",
+      "description": "Largest text + data the firmware may occupy. Pico 2 ships with 4 MB of flash.",
+      "default": 4194304,
+      "min": 1
+    },
+    "ram_budget": {
+      "type": "number",
+      "title": "RAM budget (bytes)",
+      "description": "Largest RAM image the linker may place, including the SDK's minimum heap and stack. The RP2350 has 520 KB of SRAM.",
+      "default": 532480,
+      "min": 1
+    },
+    "ram_start": {
+      "type": "number",
+      "title": "RAM start address",
+      "description": "Sections at or above this address count as RAM, below it as flash. RP2040 and RP2350 SRAM starts at 0x20000000.",
+      "default": 536870912,
+      "min": 0
+    },
+    "size_tool": {
+      "type": "string",
+      "title": "size tool",
+      "description": "The binutils size command for your toolchain",
+      "default": "arm-none-eabi-size"
+    },
+    "build_pattern": {
+      "type": "string",
+      "title": "Build command pattern",
+      "description": "Regular expression; a Bash command that matches it is treated as a build",
+      "default": "\\b(cmake\\s+--build|ninja|make)\\b"
+    }
+  },
+  "repository": "https://github.com/Reefwing-Software/firmware-budget",
+  "homepage": "https://github.com/Reefwing-Software/firmware-budget"
+}
