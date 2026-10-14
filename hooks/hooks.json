@@ -1,0 +1,4 @@
+{
+  "description": "The firmware-budget hooks module",
+  "modules": ["./register.ts"]
+}
