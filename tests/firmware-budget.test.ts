@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { bar, parseSize, percent, toSample } from '../hooks/register'
+import { bar, isBuild, parseSize, percent, toSample } from '../hooks/register'
 
 // size -A output from the Chapter 10 noise suppression build, Pico 2, Release, 25 Sep 2026
 const SIZE_OUT = `build/pico2-audio-spectrogram.elf  :
@@ -58,6 +58,15 @@ test('parses size -A output into flash and RAM by address', async () => {
   expect(parseSize('arm-none-eabi-size: no such file', RAM_START)).toBe(null)
 })
 
+test('a full path to the build tool still counts as a build', async () => {
+  const pattern = new RegExp(OPTIONS.build_pattern)
+  expect(isBuild('cmake --build build', pattern)).toBe(true)
+  expect(isBuild('/Users/dsuch/.pico-sdk/cmake/v3.31.5/CMake.app/Contents/bin/cmake --build build', pattern)).toBe(true)
+  expect(isBuild('cd build && make -j4', pattern)).toBe(true)
+  expect(isBuild('ls build', pattern)).toBe(false)
+  expect(isBuild('cmake -S . -B build', pattern)).toBe(false)
+})
+
 test('bar and percent are proportional and capped', async () => {
   expect(bar(0, 100, 10)).toBe('░░░░░░░░░░')
   expect(bar(50, 100, 10)).toBe('█████░░░░░')
@@ -74,6 +83,8 @@ test('a successful build measures the ELF and the band draws it', { options: OPT
   on('tool.call', () => ({ result: 'built' }))
   on('ui.log', () => ({ value: undefined }))
   on('ui.toast', () => ({ value: undefined }))
+  // What another band mod, or Claude Code, draws beneath this one
+  on('ui.render', () => ({ type: 'Text', props: {}, children: ['context: 41%'] }))
 
   await $.tool.call({ tool: 'Bash', command: 'cmake --build build' })
   expect(argvs).toEqual([['arm-none-eabi-size', '-A', 'build/pico2-audio-spectrogram.elf']])
@@ -82,6 +93,8 @@ test('a successful build measures the ELF and the band draws it', { options: OPT
     const ui = await $.ui.mount({ ...BAND, surface })
     expect(await ui.find({ type: 'Text', text: /815\.3 KB \/ 4096\.0 KB/ })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: /126\.3 KB \/ 520\.0 KB/ })).toBeDefined()
+    // The other mod's band is kept under the bars
+    expect(await ui.find({ type: 'Text', text: 'context: 41%' })).toBeDefined()
     await ui.unmount()
   }
 })

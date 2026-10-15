@@ -8,7 +8,7 @@ ram   █████░░░░░░░░░░░░░░░  24.3%  126.3
 build 3 · cmake --build build
 ```
 
-The numbers are what the linker produced, not what the model says it produced. The mod runs `size -A` and splits sections by address: everything placed below `ram_start` is flash (the XIP image), plus the `.data` load image; everything at or above it is RAM, which on the Pico SDK includes the vector table, `.data`, `.bss` and the SDK's minimum heap and stack reservations. Berkeley `size` is not used because the Pico SDK linker script marks `.data` executable, so Berkeley `size` folds it into `text` and reports `data 0`. 
+The numbers are what the linker produced, not what the model says it produced. The mod runs `size -A` and splits sections by address: everything placed below `ram_start` is flash (the XIP image), plus the `.data` load image; everything at or above it is RAM, which on the Pico SDK includes the vector table, `.data`, `.bss` and the SDK's minimum heap and stack reservations. Berkeley `size` is not used because the Pico SDK linker script marks `.data` executable, so Berkeley `size` folds it into `text` and reports `data 0`.
 
 Tested with the Chapter 10 noise suppression project from *Embedded AI* (No Starch Press): a Pico 2 running RNNoise against a PDM microphone with a spectrogram on an LCD. Baseline: flash 834,916 B (19.9%), RAM 129,368 B (24.3%).
 
@@ -22,7 +22,11 @@ Tested with Claude Code 2.1.299. Mods need v2.1.287 or later.
 /plugin install firmware-budget --marketplace Reefwing-Software/firmware-budget
 ```
 
-Answer `y` to add the marketplace, then pick a scope. Claude Code then asks for the ELF path; the budgets default to a Pico 2.
+Answer `y` to add the marketplace, then pick a scope. Claude Code then asks for the ELF path; the budgets default to a Pico 2. To set an option from the shell, the values go in as JSON on stdin:
+
+```bash
+echo '{"elf":"build/firmware.elf"}' | claude plugin configure firmware-budget@firmware-budget --values-stdin
+```
 
 To run it from a folder while developing:
 
@@ -70,6 +74,9 @@ Eight tests, built on the real `size -A` output of the Chapter 10 noise suppress
 ## Limits
 
 - The guard matches the text of a Bash command. It is a reflex for the agent, not a branch protection rule.
+- The mod runs `size` with the session's own PATH, which in the Desktop app is the app's environment, not your shell's. The Pico SDK installer keeps its toolchain under `~/.pico-sdk` and off the PATH, so set `size_tool` to the full path, such as `~/.pico-sdk/toolchain/14_2_Rel1/bin/arm-none-eabi-size`. The failure shows as one dim line above the prompt and in `/budget`.
+- The build pattern is tested with any directory stripped from each word of the command, so a full path to `cmake` still counts as a build.
+- The band is shared with other mods. This one draws its bars above whatever the mods after it draw.
 - The band draws in the terminal and the Desktop app's Code tab. In the VS Code extension the hooks run but nothing is drawn; `/budget` still prints.
 - `size` reports what the linker placed. Heap use beyond the SDK's reservation, stack depth beyond the dummy section, and anything your firmware writes to flash at runtime are not in the numbers.
 

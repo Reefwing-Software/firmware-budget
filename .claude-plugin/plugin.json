@@ -1,6 +1,6 @@
 {
   "name": "firmware-budget",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Shows flash and RAM use of a firmware ELF above the prompt after every build, and holds a commit that is over budget",
   "author": {
     "name": "David Such",

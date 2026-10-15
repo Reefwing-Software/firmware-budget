@@ -132,6 +132,14 @@ function summary(history: Sample[], o: Options, lastFault: string | null): strin
   return [head, over ? `OVER BUDGET: ${over}` : 'within budget', ...rows].join('\n')
 }
 
+// True when the command is a build: the pattern is tested against the command
+// with any leading path stripped from each word, so a full path to cmake or a
+// wrapper such as ninja-build still matches a pattern written for the bare name.
+export function isBuild(command: string, pattern: RegExp): boolean {
+  const bare = command.replace(/(^|\s)\S*\//g, '$1')
+  return pattern.test(bare)
+}
+
 export const register: Register = (on, options) => {
   const o = options as unknown as Options
   const build = new RegExp(o.build_pattern)
@@ -173,7 +181,7 @@ export const register: Register = (on, options) => {
       }
     }
     const ran = await next(e)
-    if (!build.test(e.command)) return ran
+    if (!isBuild(e.command, build)) return ran
     if (ran.deny !== undefined || ran.isError === true) return ran
     const label = e.command.trim().replace(/\s+/g, ' ').slice(0, 40)
     const why = await measure($, o, label)
@@ -183,19 +191,23 @@ export const register: Register = (on, options) => {
     next.called ? next(e) : COMMIT.test(e.command) ? { deny: 'firmware-budget: its commit guard failed, so the commit was not run.' } : next(e),
   )
 
+  // The band is shared with every other mod, so what the mods after this one
+  // draw is kept under the bars rather than replaced.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
     const history = await read($, samples)
     const lastFault = await read($, fault)
     const { Box, Text } = $.ui.resolve(e)
+    const theirs = await next(e)
+    const withTheirs = (mine: typeof theirs) => Box({ flexDirection: 'column', children: [mine, theirs] })
 
     if (history.length === 0) {
-      if (lastFault === null) return next(e)
-      return Box({ children: [Text({ dimColor: true, children: ['firmware-budget: ' + lastFault] })] })
+      if (lastFault === null) return theirs
+      return withTheirs(Text({ dimColor: true, children: ['firmware-budget: ' + lastFault] }))
     }
 
     const last = history[history.length - 1]
-    if (last === undefined) return next(e)
+    if (last === undefined) return theirs
     const prev = history.length > 1 ? history[history.length - 2] ?? null : null
     const delta = (now: number, before: number | null) => (before === null ? '' : ' ' + (now - before >= 0 ? '+' : '') + (now - before) + ' B')
     const line = (name: string, used: number, budget: number, before: number | null) => {
@@ -211,13 +223,15 @@ export const register: Register = (on, options) => {
         ],
       })
     }
-    return Box({
-      flexDirection: 'column',
-      children: [
-        line('flash', last.flash, o.flash_budget, prev ? prev.flash : null),
-        line('ram', last.ram, o.ram_budget, prev ? prev.ram : null),
-        Text({ dimColor: true, children: [`build ${last.n} · ${last.label}` + (lastFault ? ' · ' + lastFault : '')] }),
-      ],
-    })
+    return withTheirs(
+      Box({
+        flexDirection: 'column',
+        children: [
+          line('flash', last.flash, o.flash_budget, prev ? prev.flash : null),
+          line('ram', last.ram, o.ram_budget, prev ? prev.ram : null),
+          Text({ dimColor: true, children: [`build ${last.n} · ${last.label}` + (lastFault ? ' · ' + lastFault : '')] }),
+        ],
+      }),
+    )
   })
 }
